@@ -1,0 +1,59 @@
+// Understand, Correct, Improve           ___
+// ________/| _________________/\__/\____/  /_____
+// \  ____/ |/   __/  /  / __ /  \/  \  \  /   __/
+// |   __/  /\__   \    /  __ \      /     \  _/ \
+// |___\ \__\____  //__/\_____/\    /__/\  /_____/
+// +-------------\/breeze'13----\  /crew-\/------+
+//                               \/
+// https://github.com/LessNick/AirWolf-Atari-Prototype
+// BSD-3-Clause license
+
+//bool fireActive = false
+
+void controlUpdate() {
+	byte joy
+	byte joyB
+
+	byte keyDel, kbd
+
+	// 632-635 ($278-$27B) joystick Controller Port (STICK0-4)
+	// 636-643 ($27C-$283) Paddle Trigger (PTRIG0-PTRIG7)
+	// 644-647 ($284-$287) joystick Trigger (STRIG0-STRIG3)
+	
+	joy = peek(632)
+	joyB = peek(644)
+
+	keyDel = peek(753)
+	if (keyDel != 0) {
+		kbd = peek(53769)
+	}
+
+	if (joyB == 0 || kbd == 33) {
+//		if (fireActive == false) {
+//			fireActive = true
+			controlFire()
+//		}
+	}
+//	if (joyB != 0 && kbd != 33) {
+//		fireActive = false
+//	}
+	if (joy == 11 || joy == 10 || joy == 9 || kbd == 134) {
+		controlLeft()
+
+	} else if (joy == 7 || joy == 6 || joy == 5 || kbd == 135) {
+		controlRight()
+	}
+	if (joy == 14 || joy == 10 || joy == 6 || kbd == 142) {
+		controlUp()
+
+	} else if (joy == 13 || joy == 9 || joy == 5 || kbd == 143) {
+		controlDown()
+	}
+
+	//if (joy != 15) {
+	//}
+
+	kbd = 0
+
+	//poke(53769, 0)
+}

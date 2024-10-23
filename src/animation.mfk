@@ -1,0 +1,166 @@
+// Understand, Correct, Improve           ___
+// ________/| _________________/\__/\____/  /_____
+// \  ____/ |/   __/  /  / __ /  \/  \  \  /   __/
+// |   __/  /\__   \    /  __ \      /     \  _/ \
+// |___\ \__\____  //__/\_____/\    /__/\  /_____/
+// +-------------\/breeze'13----\  /crew-\/------+
+//                               \/
+// https://github.com/LessNick/AirWolf-Atari-Prototype
+// BSD-3-Clause license
+
+import sprites
+
+byte _color0
+byte _color1
+byte _color2
+byte _color3
+
+array(pointer) ani1frames = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+array(byte) ani1duration =  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+byte ani1len = 5
+byte ani1pos = 0
+byte ani1time = 0
+byte ani1sprLen = 0
+
+array(pointer) ani2frames = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+array(byte) ani2duration =  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+byte ani2len = 5
+byte ani2pos = 0
+byte ani2time = 0
+byte ani2sprLen = 0
+
+array(pointer) ani3frames = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+array(byte) ani3duration =  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+byte ani3len = 5
+byte ani3pos = 0
+byte ani3time = 0
+byte ani3sprLen = 0
+
+array(pointer) ani4frames = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+array(byte) ani4duration =  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+byte ani4len = 5
+byte ani4pos = 0
+byte ani4time = 0
+byte ani4sprLen = 0
+
+byte p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y
+
+void initAni1(byte l, pointer d, byte c, byte sl) {
+	_color0 = c
+	ani1len = l
+	ani1sprLen = sl
+	ubyte i
+	for i,0,to,l-1 {
+		ani1duration[i] = d[i]
+	}
+	ani1time = 1
+}
+void initAni2(byte l, pointer d, byte c, byte sl) {
+	_color1 = c
+	ani2len = l
+	ani2sprLen = sl
+	ubyte i
+	for i,0,to,l-1 {
+		ani2duration[i] = d[i]
+	}
+	ani2time = 1
+}
+void initAni3(byte l, pointer d, byte c, byte sl) {
+	_color2 = c
+	ani3len = l
+	ani3sprLen = sl
+	ubyte i
+	for i,0,to,l-1 {
+		ani3duration[i] = d[i]
+	}
+	ani3time = 1
+}
+void initAni4(byte l, pointer d, byte c, byte sl) {
+	_color3 = c
+	ani4len = l
+	ani4sprLen = sl
+	ubyte i
+	for i,0,to,l-1 {
+		ani4duration[i] = d[i]
+	}
+	ani4time = 1
+}
+
+void setAni1frame(pointer frameP, byte frameI) {
+	ani1frames[frameI] = frameP
+}
+void setAni2frame(pointer frameP, byte frameI) {
+	ani2frames[frameI] = frameP
+}
+void setAni3frame(pointer frameP, byte frameI) {
+	ani3frames[frameI] = frameP
+}
+void setAni4frame(pointer frameP, byte frameI) {
+	ani4frames[frameI] = frameP
+}
+
+byte aniUpdate(byte s1x, byte s1y, byte s2x, byte s2y, byte s3x, byte s3y, byte s4x, byte s4y) {
+	byte aniStatus
+	aniStatus = 0
+	ani1time -= 1
+	if (ani1time == 0) {
+		ani1time = ani1duration[ani1pos]
+		sprShowP(0, ani1frames[ani1pos], ani1sprLen, _color0, s1x, s1y)
+		ani1pos += 1
+		if (ani1pos == ani1len) {
+			ani1pos = 0
+			aniStatus = aniStatus | 1
+		}
+	} elseif (s1x != p1x || s1y != p1y) {
+		sprShowP(0, ani1frames[ani1pos], ani1sprLen, _color0, s1x, s1y)	
+	}
+	p1x = s1x
+	p1y = s1y
+	
+	ani2time -= 1
+	if (ani2time == 0) {
+		ani2time = ani2duration[ani2pos]
+		sprShowP(1, ani2frames[ani2pos], ani2sprLen, _color1, s2x, s2y)
+		ani2pos += 1
+		if (ani2pos == ani2len) {
+			ani2pos = 0
+			aniStatus = aniStatus | 2
+		}
+	} elseif (s2x != p2x || s2y != p2y) {
+		sprShowP(1, ani2frames[ani2pos], ani2sprLen, _color1, s2x, s2y)
+	}
+	p2x = s2x
+	p2y = s2y
+	
+	ani3time -= 1
+	if (ani3time == 0) {
+		ani3time = ani3duration[ani3pos]
+		sprShowP(2, ani3frames[ani3pos], ani3sprLen, _color2, s3x, s3y)
+		ani3pos += 1
+		if (ani3pos == ani3len) {
+			ani3pos = 0
+			aniStatus = aniStatus | 4
+		}
+	} elseif (s3x != p3x || s3y != p3y) {
+		sprShowP(2, ani3frames[ani3pos], ani3sprLen, _color2, s3x, s3y)
+	}
+	p3x = s3x
+	p3y = s3y
+
+	ani4time -= 1
+	if (ani4time == 0) {
+		ani4time = ani4duration[ani4pos]
+		sprShowP(3, ani4frames[ani4pos], ani4sprLen, _color3, s4x, s4y)
+		ani4pos += 1
+		if (ani4pos == ani4len) {
+			ani4pos = 0
+			aniStatus = aniStatus | 8
+		}
+	} elseif (s4x != p4x || s4y != p4y) {
+		sprShowP(3, ani4frames[ani4pos], ani4sprLen, _color3, s4x, s4y)
+	}
+	p4x = s4x
+	p4y = s4y
+
+	return aniStatus
+}

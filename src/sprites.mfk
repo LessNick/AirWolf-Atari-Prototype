@@ -1,0 +1,174 @@
+// Understand, Correct, Improve           ___
+// ________/| _________________/\__/\____/  /_____
+// \  ____/ |/   __/  /  / __ /  \/  \  \  /   __/
+// |   __/  /\__   \    /  __ \      /     \  _/ \
+// |___\ \__\____  //__/\_____/\    /__/\  /_____/
+// +-------------\/breeze'13----\  /crew-\/------+
+//                               \/
+// https://github.com/LessNick/AirWolf-Atari-Prototype
+// BSD-3-Clause license
+
+import spritesData
+
+const byte pmgmem = $80		// pmgmem * 256 == place for sprites
+
+void sprInit(byte pSize0, byte pSize1, byte pSize2, byte pSize3) {
+
+	poke($D407,pmgmem)	// PMGBASE place in memory
+
+		//   76543210
+	poke ($022F,%00111110)	// SDMCTL - Shadow of $D400 - Direct Memory Access (DMA) Control
+				// Bit	Dec	Function
+				// 0,1	0	Playfield off
+				// 0,1	1	Narrow playfield (32 bytes/chars)
+				// 0,1	2	Normal playfield (40 bytes/chars)
+				// 0,1	3	Wide playfield (48 bytes/chars)
+				// 2	4	DMA for Missiles on=1/off=0
+				// 3	8	DMA for Players on=1/off=0
+				// 4	16	One-line P/M-vertical resolution on=1/off=0
+				// 5	32	Direct Memory Access on=1/off=0
+				// 6	64	not used
+				// 7	128	not used
+		//   76543210
+	poke ($D01D,%00000011)	// GRACTL controls PM and Triggers
+				// Bit 	Function
+				// 0	Turn on missiles when =1
+				// 1	Turn on players when =1
+				// 2	Latch Triggers when =1
+				// 3	unused
+				// 4	unused
+				// 5	unused
+				// 6	unused
+				// 7	unused
+
+		//   76543210
+	poke ($026F,%00100001)	// GPRIOR Priority Selection Register
+				// Bit	Value	Description
+				// 0	1	P0-P1-P2-P3 PF0-PF1-PF2-PF3 BAK
+				// 1	2	P0-P1 PF0-PF1-PF2-PF3 P2-P3 BAK
+				// 2	4	PF0-PF1-PF2-PF3 P0-P1-P2-P3 BAK
+				// 3	8	PF0-PF1 P0-P1-P2-P3 PF2-PF3 BAK
+				// 4	16	Four Missiles add up to be 5th player
+				// 5	32	Overlapping Players have 3rd color
+				// 6	64	GTIA Mode see next table
+				// 7	128	GTIA Mode see next table
+	
+	poke ($D008,pSize0)	// [W] SIZEP0 size of player 0
+				// 0 = normal, 1 = double, 3 = quadruple
+				// [R] M0PL Collision Missile 0 with Player
+	poke ($D009,pSize1)	// [W] SIZEP1 size of player 1
+	poke ($D00a,pSize2)	// [W] SIZEP2 size of player 2
+	poke ($D00b,pSize3)	// [W] SIZEP3 size of player 3
+
+	poke ($D00c,0)		// [W] SIZEM size of missile
+				// 0 = normal, 1 = double, 3 = quadruple
+}
+
+asm void setColorPlayer(byte playerNum, byte register(a) m) {
+	LDX playerNum
+	STA $02C0,X
+	RTS
+}
+
+asm void setPosPlayerX(byte playerNum, byte register(a) m) {
+	LDX playerNum
+	STA $D000,X
+	RTS
+}
+
+asm void setPosMissileX(byte missileNum, byte register(a) m) {
+	LDX missileNum
+	STA $D004,X
+	RTS
+}
+
+void sprShowP(byte playerNum, pointer _sprData, byte _sprSize, byte _sprColor, byte x, byte y) {
+	pointer pmg0
+	ubyte i
+
+	setColorPlayer(playerNum, _sprColor)
+	setPosPlayerX(playerNum, x)
+
+	// copy sprite data to defined place
+	pmg0 = word((pmgmem*256) + 1024 + ($100 * playerNum) + y)
+	for i,0,to,_sprSize-1 {
+		pmg0[i]=_sprData[i]
+	}
+}
+
+void sprShowM(byte missileNum, byte x, byte y) {
+	if (missileNum == 0) {
+		sprDrawM(missileNum, x, y, %00000001, %00000010, %00000001)
+	} else {
+		sprDrawM(missileNum, x, y, %00000000, %00000011, %00000000)
+
+	}
+}
+
+void sprHideM(byte missileNum, byte x, byte y) {
+	sprDrawM(missileNum, x, y, %00000000, %00000000, %00000000)
+}
+
+void sprDrawM(byte missileNum, byte x, byte y, byte m0, byte m1, byte m2) {
+	pointer pmg0
+	setPosMissileX(missileNum, x)
+
+	if (missileNum == 1) {
+		m0 = m0 << 2
+		m1 = m1 << 2
+		m2 = m2 << 2
+	} else if (missileNum == 2) {
+		m0 = m0 << 4
+		m1 = m1 << 4
+		m2 = m2 << 4
+	} else if (missileNum == 3) {
+		m0 = m0 << 6
+		m1 = m1 << 6
+		m2 = m2 << 6
+	}
+	pmg0 = word((pmgmem*256) + 768 + y)
+	pmg0[0] = m0
+	pmg0[1] = m1
+	pmg0[2] = m2
+
+}
+
+// Sync: Wait screen start (Like Z80 Int)
+noinline asm void wait(byte register(a) f) {
+	clc
+	adc os_RTCLOK.b2
+	.rt_check:
+	cmp os_RTCLOK.b2
+	bne .rt_check
+	rts
+}
+
+void collisionsUpdate() {
+	// D000	M0PF	Missile 0 to playfield collision
+	// D001	M1PF	Missile 1 to playfield collision
+	// D002	M2PF	Missile 2 to playfield collision
+	// D003	M3PF	Missile 3 to playfield collision
+	// D004	P0PF	Player 0 to playfield collision
+	// D005	P1PF	Player 1 to playfield collision
+	// D006	P2PF	Player 2 to playfield collision
+	// D007	P3PF	Player 3 to playfield collision
+	// D008	M0PL	Missile 0 to player collision
+	// D009	M1PL	Missile 1 to player collision
+	// D00A	M2P1	Missile 2 to player collision
+	// D00B	M3PL	Missile 3 to player collision
+	// D00C	P0PL	Player 0 to player collision
+	// D00D	P1PL	Player 1 to player collision
+	// D00E	P2P1	Player 2 to player collision
+	// D00F	P3P1	Player 3 to player collision
+	// D010	TRIG0	Read trigger button 0
+	// D011	TRIG1	Read trigger button 1
+	// D012	TRIG2	Read trigger button 2
+	// D013	TRIG3	Read trigger button 3
+
+	if (peek($D00E) != 0 && (peek($D00C) != 0 || peek($D00D) != 0)) { colisionEnemy1() }
+	if (peek($D00F) != 0 && (peek($D00C) != 0 || peek($D00D) != 0)) { colisionEnemy2() }
+	
+	if ((peek($D008) & 4) == 4 || (peek($D009) & 4) == 4) { missileEnemy1() }
+	if ((peek($D008) & 8) == 8 || (peek($D009) & 8) == 8) { missileEnemy2() }
+
+}

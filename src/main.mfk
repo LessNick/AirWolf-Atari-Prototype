@@ -1,0 +1,356 @@
+// Understand, Correct, Improve           ___
+// ________/| _________________/\__/\____/  /_____
+// \  ____/ |/   __/  /  / __ /  \/  \  \  /   __/
+// |   __/  /\__   \    /  __ \      /     \  _/ \
+// |___\ \__\____  //__/\_____/\    /__/\  /_____/
+// +-------------\/breeze'13----\  /crew-\/------+
+//                               \/
+// https://github.com/LessNick/AirWolf-Atari-Prototype
+// BSD-3-Clause license
+
+import stdio
+import random
+import sprites
+
+import control
+
+import animation
+
+import spritesData
+
+byte playerPosX
+byte playerPosY
+bool playerIsDead
+
+byte enemy1PosX
+byte enemy1PosY
+bool enemy1IsDead
+byte enemy1Speed
+
+byte enemy2PosX
+byte enemy2PosY
+bool enemy2IsDead
+byte enemy2Speed
+
+byte missile1PosX
+byte missile1PosY
+
+byte missile2PosX
+byte missile2PosY
+
+byte missile1Interval
+bool missile1Launched
+
+byte missile2Interval
+bool missile2Launched
+
+word deathCount
+word scoreCount
+
+array titleStr = "=AirWolf="
+
+void printAt(byte x, byte y, word i) {
+	poke(84, y)
+	poke(85, x)
+	putword(i)
+	putstrz("   "z)
+}
+
+void setHeroSprite() {
+	initAni1(heroFramesAni1.length, heroFramesDuration, $0e, heroSpr1a.length)
+	initAni2(heroFramesAni2.length, heroFramesDuration, $0e, heroSpr2a.length)
+	ubyte i
+	for i,0,to,heroFramesAni1.length-1 {
+		setAni1frame(heroFramesAni1[i], i)
+		setAni2frame(heroFramesAni2[i], i)
+	}
+}
+
+void setHeroExplodeSprite() {
+	initAni1(explodeFramesAni1.length, explodeFramesDuration, $0e, explodeSpr1a.length)
+	initAni2(explodeFramesAni2.length, explodeFramesDuration, $0e, explodeSpr2a.length)
+	ubyte i
+	for i,0,to,explodeFramesAni1.length-1 {
+		setAni1frame(explodeFramesAni1[i], i)
+		setAni2frame(explodeFramesAni2[i], i)
+	}
+}
+
+void setEnemy1Sprite() {
+	initAni3(enemy1FramesAni1.length, enemy1FramesDuration, $1d, enemy1Spr1a.length)
+	ubyte i
+	for i,0,to,enemy1FramesAni1.length-1 {
+		setAni3frame(enemy1FramesAni1[i], i)
+	}
+}
+
+void setEnemy2Sprite() {
+	initAni4(enemy2FramesAni1.length, enemy2FramesDuration, $ca, enemy2Spr1a.length)
+	ubyte i
+	for i,0,to,enemy2FramesAni1.length-1 {
+		setAni4frame(enemy2FramesAni1[i], i)
+	}
+}
+
+void setEnemy1DeadSprite() {
+	initAni3(e1deadFramesAni1.length, e1deadFramesDuration, $1d, e1deadSpr1a.length)
+	ubyte i
+	for i,0,to,e1deadFramesAni1.length-1 {
+		setAni3frame(e1deadFramesAni1[i], i)
+	}
+}
+
+void setEnemy2DeadSprite() {
+	initAni4(e2deadFramesAni1.length, e2deadFramesDuration, $ca, e2deadSpr1a.length)
+	ubyte i
+	for i,0,to,e2deadFramesAni1.length-1 {
+		setAni4frame(e2deadFramesAni1[i], i)
+	}
+}
+
+void controlUp() { 
+	if (playerIsDead == false) { playerPosY -= 1 }
+}
+void controlDown() {
+	if (playerIsDead == false) { playerPosY += 1 }
+}
+void controlLeft() {
+	if (playerIsDead == false) { playerPosX -= 2 }
+}
+void controlRight() {
+	if (playerIsDead == false) { playerPosX += 1 }
+}
+void controlFire() {
+	if (playerIsDead == false) {
+		if (missile1Launched == false) {
+			missile1Launched = true
+			missile1PosX = playerPosX - 2
+			missile1PosY = playerPosY + 14
+
+			//if (missile2Launched == false ) { missile2Interval = 150 }
+		
+		} else if (missile2Launched == false) {
+			missile2Launched = true
+			missile2PosX = playerPosX - 2
+			missile2PosY = playerPosY + 10
+			
+			//if (missile1Launched == false) { missile1Interval = 150 }
+		}
+
+	}
+}
+
+void colisionEnemy1() {
+	if (playerIsDead == false) {
+		playerIsDead = true
+		setHeroExplodeSprite()
+		deathCount += 1
+		printAt(9, 1, deathCount)
+	} else {
+		// resete detect collision
+		poke($D01E, 1)
+	}
+}
+
+void colisionEnemy2() {
+	if (playerIsDead == false) {
+		playerIsDead = true
+		setHeroExplodeSprite()
+		deathCount += 1
+		printAt(9, 1, deathCount)
+	} else {
+		// resete detect collision
+		poke($D01E, 1)
+	}
+}
+
+void missileEnemy1() {
+	if (enemy1IsDead == false) {
+		enemy1IsDead = true
+		setEnemy1DeadSprite()
+		if (missile1Launched == true) {
+			missile1Launched = false
+			missile1Interval = 0
+			sprHideM(0, missile1PosX, missile1PosY)
+		}
+		if (missile2Launched == true) {
+			missile2Launched = false
+			missile2Interval = 0
+			sprHideM(1, missile2PosX, missile2PosY)
+		}
+
+		scoreCount += 5
+		printAt(9, 2, scoreCount)
+
+	} else {
+		// resete detect collision
+		poke($D01E, 1)
+	}
+}
+
+void missileEnemy2() {
+	if (enemy2IsDead == false) {
+		enemy2IsDead = true
+		setEnemy2DeadSprite()
+		if (missile1Launched == true) {
+			missile1Launched = false
+			missile1Interval = 0
+			sprHideM(0, missile1PosX, missile1PosY)
+		}
+		if (missile2Launched == true) {
+			missile2Launched = false
+			missile2Interval = 0
+			sprHideM(1, missile2PosX, missile2PosY)
+		}
+
+		scoreCount += 10
+		printAt(9, 2, scoreCount)
+
+	} else {
+		// resete detect collision
+		poke($D01E, 1)
+	}
+}
+
+void enemy1newPos() {
+	// clear previous sprite
+	sprShowP(2, e1deadSpr1i, e1deadSpr1i.length, 0, enemy1PosX, enemy1PosY)
+	enemy1PosX = 30
+	enemy1PosY = playerPosY
+}
+
+void enemy2newPos() {
+	// clear previous sprite
+	sprShowP(3, e2deadSpr1h, e2deadSpr1h.length, 0, enemy2PosX, enemy2PosY)
+
+	byte r
+	r = rand()
+	while (r < 10 || r > 232) {
+		r = rand()
+	}
+	enemy2PosX = 30
+	enemy2PosY = r
+}
+
+void main() {
+	
+	byte aniStatus, e1tmpSpeed, e2tmpSpeed
+
+	e1tmpSpeed = 0
+	e1tmpSpeed = 0
+
+	playerIsDead = false
+	enemy1IsDead = false
+	enemy2IsDead = false
+
+	deathCount = 0
+	scoreCount = 0
+
+	sprInit(heroSize, heroSize, enemy1Size, enemy2Size)
+
+	playerPosX = 120
+	playerPosY = 116
+
+	setHeroSprite()
+	setEnemy1Sprite()
+	setEnemy2Sprite()
+
+	init_rand_seed()
+
+	putstr(titleStr , titleStr.length)
+	new_line()
+	putstrz("Death: "z)
+	putword(deathCount)
+	new_line()
+	putstrz("Score: "z)
+	putword(scoreCount)
+	new_line()
+
+	enemy1PosX = 50
+	enemy1PosY = 116
+	enemy1Speed = 1
+
+	enemy2PosX = 50
+	enemy2PosY = 140
+	enemy2Speed = 2
+
+	missile1Interval = 0
+	missile2Interval = 0
+
+	while (true) {		
+		wait(1)
+		controlUpdate()
+		collisionsUpdate()
+		
+		if (missile1Launched == true) {
+			if (missile1Interval > 0) {
+				missile1Interval -= 1
+			} else {
+				sprShowM(0, missile1PosX, missile1PosY)
+				missile1PosX -= 1
+				if (missile1PosX < 44) {
+					missile1Launched = false
+					sprHideM(0, missile1PosX, missile1PosY)
+				}
+			}
+		}
+		if (missile2Launched == true) {
+			if (missile2Interval > 0) {
+				missile2Interval -= 1
+			} else {
+				sprShowM(1, missile2PosX, missile2PosY)
+				missile2PosX -= 2
+				if (missile2PosX < 44) {
+					missile2Launched = false
+					sprHideM(1, missile2PosX, missile2PosY)
+				}
+			}
+		}
+
+		aniStatus = aniUpdate(
+			playerPosX,   playerPosY,
+			playerPosX+8, playerPosY,
+			enemy1PosX,   enemy1PosY,
+			enemy2PosX,   enemy2PosY
+		)
+
+		if (playerIsDead == true && (aniStatus & %00000011) > 0) {
+			playerPosX = 120
+			playerPosY = 116
+			setHeroSprite()
+			// resete detect collision
+			poke($D01E, 1)
+			playerIsDead = false
+		}
+		
+		if (enemy1IsDead == true && (aniStatus & %00000100) > 0) {
+			enemy1newPos()
+			setEnemy1Sprite()
+			// resete detect collision
+			poke($D01E, 1)
+			enemy1IsDead = false
+		}
+		
+		if (enemy2IsDead == true && (aniStatus & %00001000) > 0) {
+			enemy2newPos()
+			setEnemy2Sprite()
+			// resete detect collision
+			poke($D01E, 1)
+			enemy2IsDead = false
+		}
+
+		e1tmpSpeed += 1
+		if (e1tmpSpeed == enemy1Speed) {
+			e1tmpSpeed = 0
+			enemy1PosX += 1
+			if (enemy1PosX > 220) {	enemy1newPos() }
+		}
+		e2tmpSpeed += 1
+		if (e2tmpSpeed == enemy2Speed) {
+			e2tmpSpeed = 0
+			enemy2PosX += 1
+			if (enemy2PosX > 220) {	enemy2newPos() }
+		}
+
+	}
+}
