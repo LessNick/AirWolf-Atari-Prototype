@@ -1,0 +1,86 @@
+// Understand, Correct, Improve           ___
+// ________/| _________________/\__/\____/  /_____
+// \  ____/ |/   __/  /  / __ /  \/  \  \  /   __/
+// |   __/  /\__   \    /  __ \      /     \  _/ \
+// |___\ \__\____  //__/\_____/\    /__/\  /_____/
+// +-------------\/breeze'13----\  /crew-\/------+
+//                               \/
+// https://github.com/LessNick/AirWolf-Atari-Prototype
+// BSD-3-Clause license
+
+byte sfxBegin, sfxEnd, sfxCurrent, sfxData
+bool sfxIsPlaying
+
+struct fxData { byte begin, byte end, byte data }
+
+fxData fxChopper = fxData(16, 17, (0 << 5) | 5)
+
+
+noinline asm void pokeyInit() {
+		lda	#0
+		ldx	#8
+.clearLoop:
+		sta	$d200,x		// pokey 16 registers
+		dex
+		bpl	.clearLoop
+
+		lda	#3
+		sta	$d20f		// skctl
+
+		rts
+}
+
+asm void initNoice(byte sndData) {
+	lda	#121
+	sta	$d200		// audf1
+
+	lda	sndData
+	sta	$d201		// audc1:
+				// 7,6,5   - 3 bit Distortion
+				// 4       - 1 bit vol control
+				// 3,2,1,0 - 4 bit volume
+	rts
+}
+
+asm void playNoice(byte register(x) f) {
+	stx	$d200		// audf1
+	rts
+}
+
+asm void stopNoice() {
+	lda	#0		// silent
+	sta	$d200
+	sta	$d201
+
+	rts
+}
+
+void sfxInit() {
+	pokeyInit()
+	sfxIsPlaying = false
+}
+
+void sfxPlay(fxData _d) {
+	initNoice(_d.data )
+	sfxBegin = _d.begin
+	sfxCurrent = _d.begin
+	sfxEnd = _d.end
+	sfxIsPlaying = true
+}
+
+void sfxUpdate() {
+	if (sfxIsPlaying == true) {
+		if (sfxCurrent > sfxEnd) {
+			stopNoice()
+			sfxIsPlaying = false
+		} else {
+			playNoice(sfxCurrent)
+			sfxCurrent += 1
+		}
+	}
+}
+
+bool sfxStatus() {
+	return sfxIsPlaying
+}
+

@@ -18,6 +18,8 @@ import animation
 
 import spritesData
 
+import soundFX
+
 byte playerPosX
 byte playerPosY
 bool playerIsDead
@@ -277,8 +279,14 @@ void main() {
 	missile1Interval = 0
 	missile2Interval = 0
 
+	sfxInit()
+
 	while (true) {		
 		wait(1)
+		if (sfxStatus() == false) {
+			sfxPlay(fxChopper)
+		}
+		sfxUpdate()
 		controlUpdate()
 		collisionsUpdate()
 		
